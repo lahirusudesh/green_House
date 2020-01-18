@@ -1,0 +1,152 @@
+#include <SPI.h>
+#include <ArduinoJson.h>
+#include "nRF24L01.h"
+#include "RF24.h"
+#include "printf.h"
+#include "setting.h"
+#include "radio.h"
+
+/* jason declarations */
+StaticJsonDocument<200> doc;
+DeserializationError error;
+String jsonOutput = "";
+/*************************/
+
+static uint32_t message_count = 0;
+static bool dataWaitingFlag = false;
+static bool dataDecriptionFlag = false;
+static bool badDataFlag = false;
+unsigned int startTime = 0;
+unsigned int endTime = 0;
+
+String incomingData; // hold incoming data before store
+
+void setup()
+{
+  Serial.begin(115200);
+  printf_begin();
+  // Setup and configure rf radio
+  radio.begin();
+  //radio.setPALevel(RF24_PA_LOW);
+  radio.enableAckPayload();      // We will be using the Ack Payload feature, so please enable it
+  radio.enableDynamicPayloads(); // Ack payloads are dynamic payloads
+
+  // Open pipes to other node for communication
+  radio.openWritingPipe(NODE_ADDRESS[0]);
+  radio.openReadingPipe(1, CONTROLLER_ADDRESS);
+
+  radio.printDetails(); // Dump the configuration of the rf unit for debugging
+  delay(50);
+  attachInterrupt(0, checkRadio, LOW); // Attach interrupt handler to interrupt #0 (using pin 2) on BOTH the sender and receiver
+}
+
+void loop()
+{
+  Serial.println(F("\tNew cycle bigin..."));
+  if (!dataWaitingFlag && !dataDecriptionFlag) // send data request if we not wait for another data from node
+  {
+    sendRequest();
+    dataWaitingFlag = true;
+  }
+  while (dataWaitingFlag)
+  {
+    // do nothing wait for data receive
+    //if bad Data resived try Again
+    Serial.println(F("Waiting for data"));
+    if (badDataFlag)
+    {
+      sendRequest();
+    }
+    delay(100);
+  }
+  while (!dataDecriptionFlag)
+  {
+    //Wait for data to set for decript
+    Serial.println(F("\tWaiting for Decript"));
+    delay(50);
+  }
+
+  if (dataDecriptionFlag)
+  {
+    decriptData(incomingData);
+    dataDecriptionFlag = false;
+  }
+  delay(5000); // wait some time before bign next cycle
+}
+
+
+void sendRequest()
+{
+  Serial.println(F("Now sending request"));
+  radio.startWrite(&REQUEST_CODE, sizeof(REQUEST_CODE), 0);
+}
+
+void checkRadio(void)
+{
+
+  bool tx, fail, rx;
+  radio.whatHappened(tx, fail, rx); // What happened to trigger interrupt?
+
+  if (tx)
+  {
+    // Have we successfully transmitted request?
+    // If we successfully send the request wait for the data
+    Serial.println(F("Send:OK"));
+    badDataFlag = false;
+  }
+
+  if (fail)
+  {
+    // Have we failed to transmit request?
+    // The retry to get data from node
+    Serial.println(F("Send:Failed retrying now"));
+    badDataFlag = true;
+  }
+
+  if (rx || radio.available())
+  {
+    // Did we receive data form node ?
+    char dataFromNode[BUFF_SIZE] = "";
+    radio.read(&dataFromNode, sizeof(dataFromNode));
+    incomingData = dataFromNode; // convert to string for futer use
+    Serial.println(incomingData);
+    if (incomingData == "")
+    {
+      Serial.println(F("Receive: Bad data retrying now"));
+      badDataFlag = true;
+    }
+    else
+    {
+      Serial.println(F("Receive: OK"));
+      dataDecriptionFlag = true;
+      dataWaitingFlag = false;
+    }
+  }
+}
+
+String decriptData(String Nodedata)
+{
+  uint8_t j = 0;
+  String subData[10];
+  for (uint8_t i = 0; i < Nodedata.length(); i++)
+  {
+    if (Nodedata[i] == '&')
+    {
+      j++;
+    }
+    else
+    {
+      subData[j] = subData[j] + Nodedata[i];
+    }
+  }
+  jsonOutput = "";
+  JsonObject data = doc.to<JsonObject>(); // create json object
+  for (uint8_t i = 0; i <= j; i++)
+  {
+    data["data" + String(i)] = subData[i];
+  }
+
+  serializeJson(data, jsonOutput);
+  Serial.println(jsonOutput); // print to serilal monitoro for debug purpuses
+  return jsonOutput;
+}

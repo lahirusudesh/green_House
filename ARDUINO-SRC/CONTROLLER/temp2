@@ -1,0 +1,126 @@
+#include <SPI.h>
+#include "nRF24L01.h"
+#include "RF24.h"
+#include "printf.h"
+#include "setting.h"
+#include "radio.h"
+
+static uint32_t message_count = 0;
+static bool dataWaitingFlag = false;
+static bool waitForFirstReadFlag = false;
+static bool firstSendingFlag = true;
+
+volatile static uint8_t dataLength; // length of full data set
+unsigned int startTime = 0;
+unsigned int endTime = 0;
+
+void setup()
+{
+  Serial.begin(115200);
+  printf_begin();
+  // Setup and configure rf radio
+  radio.begin();
+  //radio.setPALevel(RF24_PA_LOW);
+  radio.enableAckPayload();      // We will be using the Ack Payload feature, so please enable it
+  radio.enableDynamicPayloads(); // Ack payloads are dynamic payloads
+
+  // Open pipes to other node for communication
+  radio.openWritingPipe(NODE_ADDRESS);
+  radio.openReadingPipe(1, CONTROLLER_ADDRESS);
+
+  radio.printDetails(); // Dump the configuration of the rf unit for debugging
+  delay(50);
+  attachInterrupt(0, checkRadio, LOW); // Attach interrupt handler to interrupt #0 (using pin 2) on BOTH the sender and receiver
+}
+
+void loop()
+{
+  if (!dataWaitingFlag) // send data request if we not wait for another data from node
+  {
+    if (firstSendingFlag)
+    {
+      sendFirstRequest();
+      firstSendingFlag = false;
+      waitForFirstReadFlag = true;
+    }
+    else if (!waitForFirstReadFlag)
+    {
+      for (uint8_t i = 0; i < dataLength; i += DATA_PACKET_SIZE)
+      {
+        sendRequest(i/DATA_PACKET_SIZE);
+        delay(300);
+      }
+      firstSendingFlag = true;
+    }
+  }
+  else
+  {
+    // wait for data to resive
+    radio.startListening();
+    delay(20);
+    startTime = millis();
+    endTime = millis();
+    while (((endTime - startTime) <= WAITING_DELAY) && dataWaitingFlag)
+    {
+      endTime = millis();
+    }
+    radio.stopListening();
+    delay(20);
+    dataWaitingFlag = false;
+  }
+  delay(5000);
+}
+
+void sendFirstRequest()
+{
+  Serial.println(F("Now sending First request"));
+  radio.startWrite(&REQUEST_CODE, sizeof(REQUEST_CODE), 0);
+}
+
+void sendRequest(uint8_t request){
+  Serial.println(F("Now sending request"));
+  radio.startWrite(&request, sizeof(request), 0);
+}
+
+void checkRadio(void)
+{
+
+  bool tx, fail, rx;
+  radio.whatHappened(tx, fail, rx); // What happened to trigger interrupt?
+
+  if (tx)
+  {
+    // Have we successfully transmitted request?
+    // If we successfully send the request wait for the data
+    Serial.println(F("Send:OK"));
+    dataWaitingFlag = true;
+  }
+
+  if (fail)
+  {
+    // Have we failed to transmit request?
+    // The retry to get data from node
+    Serial.println(F("Send:Failed retrying now"));
+    if (waitForFirstReadFlag)
+    {
+      firstSendingFlag = true;
+    }
+  }
+
+  if (rx || radio.available())
+  {
+    // Did we receive data form node ?
+    char dataFromNode[BUFF_SIZE] = "";
+    radio.read(&dataFromNode, sizeof(dataFromNode));
+    String data(dataFromNode); // convert to string for futer use
+
+    Serial.println(data);
+
+    if (waitForFirstReadFlag)
+    { //check this is first data response or not
+      waitForFirstReadFlag = false;
+      dataLength = atoi(data.c_str());
+    }
+    dataWaitingFlag = false;
+  }
+}

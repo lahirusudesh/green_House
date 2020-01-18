@@ -1,0 +1,47 @@
+[
+  {
+    "Sourcefile": "",
+    "Include": "",
+    "Includepath": "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino"
+  },
+  {
+    "Sourcefile": "",
+    "Include": "",
+    "Includepath": "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\variants\\eightanaloginputs"
+  },
+  {
+    "Sourcefile": "g:\\wireless-data-collector -Lahiru\\ARDUINO-SRC\\Nodeoutput\\sketch\\DatatransferProtocall.h.cpp",
+    "Include": "SPI.h",
+    "Includepath": "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\libraries\\SPI\\src"
+  },
+  {
+    "Sourcefile": "g:\\wireless-data-collector -Lahiru\\ARDUINO-SRC\\Nodeoutput\\sketch\\DatatransferProtocall.h.cpp",
+    "Include": "nRF24L01.h",
+    "Includepath": "C:\\Users\\dxdjf\\OneDrive\\Documents\\Arduino\\libraries\\RF24"
+  },
+  {
+    "Sourcefile": "g:\\wireless-data-collector -Lahiru\\ARDUINO-SRC\\Nodeoutput\\sketch\\DatatransferProtocall.h.cpp",
+    "Include": "dht11.h",
+    "Includepath": "C:\\Users\\dxdjf\\OneDrive\\Documents\\Arduino\\libraries\\adidax-dht11-b7fbbcd"
+  },
+  {
+    "Sourcefile": "g:\\wireless-data-collector -Lahiru\\ARDUINO-SRC\\Nodeoutput\\sketch\\DatatransferProtocall.h.cpp",
+    "Include": "",
+    "Includepath": ""
+  },
+  {
+    "Sourcefile": "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\libraries\\SPI\\src\\SPI.cpp",
+    "Include": "",
+    "Includepath": ""
+  },
+  {
+    "Sourcefile": "C:\\Users\\dxdjf\\OneDrive\\Documents\\Arduino\\libraries\\RF24\\RF24.cpp",
+    "Include": "",
+    "Includepath": ""
+  },
+  {
+    "Sourcefile": "C:\\Users\\dxdjf\\OneDrive\\Documents\\Arduino\\libraries\\adidax-dht11-b7fbbcd\\dht11.cpp",
+    "Include": "",
+    "Includepath": ""
+  }
+]

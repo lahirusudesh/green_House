@@ -1,0 +1,7 @@
+{
+    "board": "arduino:avr:nano",
+    "port": "COM6",
+    "sketch": "node.ino",
+    "output": "../Nodeoutput",
+    "configuration": "cpu=atmega328old"
+}
